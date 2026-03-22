@@ -81,6 +81,7 @@ export interface HudConfig {
     sevenDayThreshold: number;
     environmentThreshold: number;
     customLine: string;
+    contextSizeOverrides: Record<string, number>;
   };
   colors: HudColorOverrides;
 }
@@ -118,6 +119,7 @@ export const DEFAULT_CONFIG: HudConfig = {
     sevenDayThreshold: 80,
     environmentThreshold: 0,
     customLine: '',
+    contextSizeOverrides: {},
   },
   colors: {
     context: 'green',
@@ -235,6 +237,25 @@ function validateThreshold(value: unknown, max = 100): number {
   return Math.max(0, Math.min(max, value));
 }
 
+function validatePositiveInt(value: unknown, defaultValue: number): number {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0) return defaultValue;
+  return value;
+}
+
+function validateContextSizeOverrides(value: unknown): Record<string, number> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return {};
+  }
+  const result: Record<string, number> = {};
+  for (const [key, val] of Object.entries(value)) {
+    const trimmedKey = key.trim();
+    if (trimmedKey.length > 0 && typeof val === 'number' && Number.isInteger(val) && val > 0) {
+      result[trimmedKey] = val;
+    }
+  }
+  return result;
+}
+
 export function mergeConfig(userConfig: Partial<HudConfig>): HudConfig {
   const migrated = migrateConfig(userConfig);
 
@@ -325,6 +346,7 @@ export function mergeConfig(userConfig: Partial<HudConfig>): HudConfig {
     customLine: typeof migrated.display?.customLine === 'string'
       ? migrated.display.customLine.slice(0, 80)
       : DEFAULT_CONFIG.display.customLine,
+    contextSizeOverrides: validateContextSizeOverrides(migrated.display?.contextSizeOverrides),
   };
 
   const colors = {

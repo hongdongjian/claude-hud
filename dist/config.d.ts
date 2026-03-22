@@ -52,6 +52,7 @@ export interface HudConfig {
         sevenDayThreshold: number;
         environmentThreshold: number;
         customLine: string;
+        contextSizeOverrides: Record<string, number>;
     };
     colors: HudColorOverrides;
 }

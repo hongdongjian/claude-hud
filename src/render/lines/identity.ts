@@ -1,15 +1,19 @@
 import type { RenderContext } from '../../types.js';
-import { getContextPercent, getBufferedPercent, getTotalTokens } from '../../stdin.js';
+import { getContextPercent, getBufferedPercent, getTotalTokens, getEffectiveContextSize } from '../../stdin.js';
 import { coloredBar, label, getContextColor, RESET } from '../colors.js';
 import { getAdaptiveBarWidth } from '../../utils/terminal.js';
 
 const DEBUG = process.env.DEBUG?.includes('claude-hud') || process.env.DEBUG === '*';
 
 export function renderIdentityLine(ctx: RenderContext): string {
-  const rawPercent = getContextPercent(ctx.stdin);
-  const bufferedPercent = getBufferedPercent(ctx.stdin);
+  const rawPercent = getContextPercent(ctx.stdin, ctx.config);
+  const bufferedPercent = getBufferedPercent(ctx.stdin, ctx.config);
   const autocompactMode = ctx.config?.display?.autocompactBuffer ?? 'enabled';
-  const percent = autocompactMode === 'disabled' ? rawPercent : bufferedPercent;
+  const overrideActive = hasContextSizeOverride(ctx);
+  // When override is active, always use raw percent to match token display
+  const percent = overrideActive
+    ? rawPercent
+    : (autocompactMode === 'disabled' ? rawPercent : bufferedPercent);
   const colors = ctx.config?.colors;
 
   if (DEBUG && autocompactMode === 'disabled') {
@@ -52,22 +56,49 @@ function formatContextValue(ctx: RenderContext, percent: number, mode: 'percent'
   const size = ctx.stdin.context_window?.context_window_size ?? 0;
 
   if (mode === 'tokens') {
-    if (size > 0) {
-      return `${formatTokens(totalTokens)}/${formatTokens(size)}`;
+    const effectiveSize = getEffectiveContextSize(ctx.stdin, ctx.config);
+    if (effectiveSize > 0) {
+      return `${formatTokens(totalTokens)}/${formatTokens(effectiveSize)}`;
     }
     return formatTokens(totalTokens);
   }
 
   if (mode === 'both') {
-    if (size > 0) {
-      return `${percent}% (${formatTokens(totalTokens)}/${formatTokens(size)})`;
+    const effectiveSize = getEffectiveContextSize(ctx.stdin, ctx.config);
+    if (effectiveSize > 0) {
+      return `${percent}% (${formatTokens(totalTokens)}/${formatTokens(effectiveSize)})`;
     }
     return `${percent}%`;
   }
 
+  const hasOverride = hasContextSizeOverride(ctx);
+
   if (mode === 'remaining') {
-    return `${Math.max(0, 100 - percent)}%`;
+    const remainPercent = Math.max(0, 100 - percent);
+    if (hasOverride) {
+      const totalTokens = getTotalTokens(ctx.stdin);
+      const size = getEffectiveContextSize(ctx.stdin, ctx.config);
+      const remaining = Math.max(0, size - totalTokens);
+      return `${remainPercent}% (${formatTokens(remaining)})`;
+    }
+    return `${remainPercent}%`;
   }
 
-  return `${percent}%`;
+  const tokenSuffix = hasOverride ? formatTokenSuffix(ctx) : '';
+  return `${percent}%${tokenSuffix}`;
+}
+
+function hasContextSizeOverride(ctx: RenderContext): boolean {
+  const effectiveSize = getEffectiveContextSize(ctx.stdin, ctx.config);
+  const stdinSize = ctx.stdin.context_window?.context_window_size ?? 0;
+  return effectiveSize > 0 && effectiveSize !== stdinSize;
+}
+
+function formatTokenSuffix(ctx: RenderContext): string {
+  const totalTokens = getTotalTokens(ctx.stdin);
+  const size = getEffectiveContextSize(ctx.stdin, ctx.config);
+  if (size > 0) {
+    return ` (${formatTokens(totalTokens)}/${formatTokens(size)})`;
+  }
+  return totalTokens > 0 ? ` (${formatTokens(totalTokens)})` : '';
 }

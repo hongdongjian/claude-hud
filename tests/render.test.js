@@ -48,7 +48,7 @@ function baseContext() {
       pathLevels: 1,
       elementOrder: ['project', 'context', 'usage', 'memory', 'environment', 'tools', 'agents', 'todos'],
       gitStatus: { enabled: true, showDirty: true, showAheadBehind: false, showFileStats: false },
-      display: { showModel: true, showProject: true, showContextBar: true, contextValue: 'percent', showConfigCounts: true, showDuration: true, showSpeed: false, showTokenBreakdown: true, showUsage: true, usageBarEnabled: false, showTools: true, showAgents: true, showTodos: true, showSessionName: false, showClaudeCodeVersion: false, showMemoryUsage: false, autocompactBuffer: 'enabled', usageThreshold: 0, sevenDayThreshold: 80, environmentThreshold: 0, customLine: '' },
+      display: { showModel: true, showProject: true, showContextBar: true, contextValue: 'percent', showConfigCounts: true, showDuration: true, showSpeed: false, showTokenBreakdown: true, showUsage: true, usageBarEnabled: false, showTools: true, showAgents: true, showTodos: true, showSessionName: false, showClaudeCodeVersion: false, showMemoryUsage: false, autocompactBuffer: 'enabled', usageThreshold: 0, sevenDayThreshold: 80, environmentThreshold: 0, customLine: '', contextSizeOverrides: {} },
       colors: {
         context: 'green',
         usage: 'brightBlue',
@@ -1491,4 +1491,59 @@ test('render compact layout keeps activity lines even when elementOrder omits th
 
   assert.ok(output.includes('Read'), 'compact mode should keep tools visible');
   assert.ok(output.includes('todo-marker'), 'compact mode should keep todos visible');
+});
+
+// --- contextSizeOverrides rendering tests ---
+
+test('renderSessionLine shows token suffix when override is active', () => {
+  const ctx = baseContext();
+  ctx.config.display.contextSizeOverrides = { 'Opus': 100000 };
+  ctx.stdin.context_window.current_usage.input_tokens = 45000;
+  const line = stripAnsi(renderSessionLine(ctx));
+  assert.ok(line.includes('45% (45k/100k)'), `expected "45% (45k/100k)" in "${line}"`);
+});
+
+test('renderSessionLine omits token suffix without override', () => {
+  const ctx = baseContext();
+  ctx.config.display.contextSizeOverrides = {};
+  ctx.stdin.context_window.current_usage.input_tokens = 45000;
+  const line = stripAnsi(renderSessionLine(ctx));
+  assert.ok(!line.includes('(45k'), `should not contain token suffix in "${line}"`);
+});
+
+test('renderSessionLine uses raw percent (no buffer) with override', () => {
+  const ctx = baseContext();
+  ctx.config.display.contextSizeOverrides = { 'Opus': 400000 };
+  ctx.stdin.context_window.current_usage.input_tokens = 55000;
+  const line = stripAnsi(renderSessionLine(ctx));
+  // 55000/400000 = 13.75% ≈ 14%, NOT 17% from buffered
+  assert.ok(line.includes('14% (55k/400k)'), `expected "14% (55k/400k)" in "${line}"`);
+});
+
+test('renderSessionLine remaining mode shows remaining tokens with override', () => {
+  const ctx = baseContext();
+  ctx.config.display.contextSizeOverrides = { 'Opus': 100000 };
+  ctx.config.display.contextValue = 'remaining';
+  ctx.stdin.context_window.current_usage.input_tokens = 45000;
+  const line = stripAnsi(renderSessionLine(ctx));
+  // 45000/100000 = 45% used → 55% remaining, 100k-45k=55k remaining
+  assert.ok(line.includes('55% (55k)'), `expected "55% (55k)" in "${line}"`);
+});
+
+test('renderIdentityLine shows token suffix when override is active', () => {
+  const ctx = baseContext();
+  ctx.config.lineLayout = 'expanded';
+  ctx.config.display.contextSizeOverrides = { 'Opus': 100000 };
+  ctx.stdin.context_window.current_usage.input_tokens = 45000;
+  const line = stripAnsi(renderIdentityLine(ctx));
+  assert.ok(line.includes('45% (45k/100k)'), `expected "45% (45k/100k)" in "${line}"`);
+});
+
+test('renderIdentityLine omits token suffix without override', () => {
+  const ctx = baseContext();
+  ctx.config.lineLayout = 'expanded';
+  ctx.config.display.contextSizeOverrides = {};
+  ctx.stdin.context_window.current_usage.input_tokens = 45000;
+  const line = stripAnsi(renderIdentityLine(ctx));
+  assert.ok(!line.includes('(45k'), `should not contain token suffix in "${line}"`);
 });
