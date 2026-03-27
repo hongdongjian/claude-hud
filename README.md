@@ -13,7 +13,7 @@ Inside a Claude Code instance, run the following commands:
 
 **Step 1: Add the marketplace**
 ```
-/plugin marketplace add jarrodwatts/claude-hud
+/plugin marketplace add hongdongjian/claude-hud
 ```
 
 **Step 2: Install the plugin**
@@ -297,7 +297,7 @@ To disable, set `display.showUsage` to `false`.
 ## Development
 
 ```bash
-git clone https://github.com/jarrodwatts/claude-hud
+git clone https://github.com/hongdongjian/claude-hud
 cd claude-hud
 npm ci && npm run build
 npm test
