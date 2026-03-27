@@ -46,6 +46,7 @@ export const DEFAULT_CONFIG = {
         sevenDayThreshold: 80,
         environmentThreshold: 0,
         customLine: '',
+        contextSizeOverrides: {},
     },
     colors: {
         context: 'green',
@@ -149,6 +150,24 @@ function validateThreshold(value, max = 100) {
         return 0;
     return Math.max(0, Math.min(max, value));
 }
+function validatePositiveInt(value, defaultValue) {
+    if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0)
+        return defaultValue;
+    return value;
+}
+function validateContextSizeOverrides(value) {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+        return {};
+    }
+    const result = {};
+    for (const [key, val] of Object.entries(value)) {
+        const trimmedKey = key.trim();
+        if (trimmedKey.length > 0 && typeof val === 'number' && Number.isInteger(val) && val > 0) {
+            result[trimmedKey] = val;
+        }
+    }
+    return result;
+}
 export function mergeConfig(userConfig) {
     const migrated = migrateConfig(userConfig);
     const lineLayout = validateLineLayout(migrated.lineLayout)
@@ -233,6 +252,7 @@ export function mergeConfig(userConfig) {
         customLine: typeof migrated.display?.customLine === 'string'
             ? migrated.display.customLine.slice(0, 80)
             : DEFAULT_CONFIG.display.customLine,
+        contextSizeOverrides: validateContextSizeOverrides(migrated.display?.contextSizeOverrides),
     };
     const colors = {
         context: validateColorValue(migrated.colors?.context)
