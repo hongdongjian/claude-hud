@@ -152,8 +152,8 @@ Edit `~/.claude/plugins/claude-hud/config.json` directly for advanced settings s
 | `gitStatus.showFileStats` | boolean | false | Show file change counts `!M +A ✘D ?U` |
 | `display.showModel` | boolean | true | Show model name `[Opus]` |
 | `display.showContextBar` | boolean | true | Show visual context bar `████░░░░░░` |
-| `display.contextValue` | `percent` \| `tokens` \| `remaining` \| `both` | `percent` | Context display format (`45%`, `45k/200k`, `55%` remaining, or `45% (45k/200k)`) |
-| `display.contextSizeOverrides` | object | `{}` | Override max context size per model. Keys are case-insensitive substrings matched against model ID/name (exact match first, then longer patterns). When active, shows token suffix and uses raw percent. Example: `{"Opus": 150000, "gpt-5.4": 256000}` |
+| `display.contextValue` | `percent` \| `tokens` \| `remaining` \| `both` | `both` | Context display format (`45%`, `45k/200k`, `55%` remaining, or `45% (45k/200k)`) |
+| `display.contextSizeOverrides` | object | `{}` | Override max context size per model. Keys are case-insensitive substrings matched against model ID/name (exact match first, then longer patterns). When active, shows token suffix and uses raw percent. Example: `{"claude": 200000, "gpt": 400000}` |
 | `display.showConfigCounts` | boolean | false | Show CLAUDE.md, rules, MCPs, hooks counts |
 | `display.showDuration` | boolean | false | Show session duration `⏱️ 5m` |
 | `display.showSpeed` | boolean | false | Show output token speed `out: 42.1 tok/s` |
@@ -228,7 +228,11 @@ To disable, set `display.showUsage` to `false`.
     "showTodos": true,
     "showConfigCounts": true,
     "showDuration": true,
-    "showMemoryUsage": true
+    "showMemoryUsage": true,
+    "contextSizeOverrides": {
+      "claude": 200000,
+      "gpt": 400000
+    }
   },
   "colors": {
     "context": "cyan",
